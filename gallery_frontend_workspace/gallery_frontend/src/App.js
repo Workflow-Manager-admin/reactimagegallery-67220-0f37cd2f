@@ -2,15 +2,19 @@ import React, { useState } from 'react';
 import './App.css';
 import images from './images';
 import ImageGrid from './ImageGrid';
+import ImageLightbox from './ImageLightbox';
 
 // PUBLIC_INTERFACE
 /**
  * Main application component for the image gallery.
- * Includes category filter, image grid, and (future) lightbox overlay.
+ * Includes category filter, image grid, and lightbox overlay.
  */
 function App() {
   // Filter state holds the currently selected category
   const [filter, setFilter] = useState('all');
+  // Modal/lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState(null);
 
   // Category definitions used in the filter bar
   const categories = [
@@ -23,6 +27,18 @@ function App() {
   // Return only images belonging to the selected category
   const filteredImages =
     filter === 'all' ? images : images.filter(img => img.category === filter);
+
+  // Trigger opening the lightbox for a given image object
+  const openLightbox = (img) => {
+    setLightboxImage(img);
+    setLightboxOpen(true);
+  };
+
+  // Close the lightbox and reset image
+  const closeLightbox = () => {
+    setLightboxOpen(false);
+    setLightboxImage(null);
+  };
 
   return (
     <div className="app">
@@ -69,9 +85,15 @@ function App() {
             ))}
           </div>
           {/* Image Grid */}
-          <ImageGrid images={filteredImages} />
+          <ImageGrid images={filteredImages} onImageClick={openLightbox} />
         </div>
       </main>
+      {/* Lightbox modal (conditioned on state) */}
+      <ImageLightbox
+        open={lightboxOpen}
+        image={lightboxImage}
+        onClose={closeLightbox}
+      />
     </div>
   );
 }

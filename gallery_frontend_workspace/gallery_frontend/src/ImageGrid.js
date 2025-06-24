@@ -7,9 +7,12 @@ import "./App.css";
  * Shows thumbnails of images matching the selected filter.
  * Images are laid out in a modern responsive grid using CSS grid.
  * 
- * @param {{ images: Array<{src: string, alt: string}> }} props 
+ * @param {{
+ *   images: Array<{src: string, alt: string}>,
+ *   onImageClick?: (img: {src: string, alt: string}) => void
+ * }} props 
  */
-function ImageGrid({ images }) {
+function ImageGrid({ images, onImageClick }) {
   if (images.length === 0) {
     return (
       <div className="image-grid-empty">
@@ -17,10 +20,33 @@ function ImageGrid({ images }) {
       </div>
     );
   }
+  // Add click/keyboard-access support for modal
+  const handleThumbClick = (img) => {
+    if (typeof onImageClick === "function") {
+      onImageClick(img);
+    }
+  };
+
   return (
     <div className="image-grid">
       {images.map((img, idx) => (
-        <div className="image-thumb" key={idx} tabIndex={0}>
+        <div
+          className="image-thumb"
+          key={idx}
+          tabIndex={0}
+          role={onImageClick ? "button" : undefined}
+          onClick={() => handleThumbClick(img)}
+          onKeyDown={e => {
+            if (
+              (e.key === "Enter" || e.key === " " || e.key === "Spacebar")
+              && onImageClick
+            ) {
+              e.preventDefault();
+              handleThumbClick(img);
+            }
+          }}
+          aria-label={img.alt || "Image"}
+        >
           <img
             src={img.src}
             alt={img.alt}
