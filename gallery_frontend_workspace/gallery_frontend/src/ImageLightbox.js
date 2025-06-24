@@ -1,8 +1,9 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 
 /**
  * PUBLIC_INTERFACE
  * A fullscreen modal/lightbox for displaying an image (with caption/info) above a dimmed background.
+ * Accessibility: trap focus, aria-modal, close on Esc, close button, and outside click.
  *
  * @param {{
  *   open: boolean,
@@ -11,16 +12,72 @@ import React, { useEffect } from "react";
  * }} props
  */
 function ImageLightbox({ open, image, onClose }) {
-  // Trap Escape key to close modal
+  const modalRef = useRef(null);
+  const closeBtnRef = useRef(null);
+  const previouslyFocusedElement = useRef(null);
+
+  // On mount/open, trap focus, restore focus after close
   useEffect(() => {
     if (!open) return;
-    const handler = (e) => {
+
+    // Save what was focused before opening modal
+    previouslyFocusedElement.current = document.activeElement;
+
+    // Focus the close button as the first item
+    if (closeBtnRef.current) {
+      closeBtnRef.current.focus();
+    }
+
+    // Trap focus inside the modal
+    function handleTab(e) {
+      if (!modalRef.current) return;
+      const focusables = modalRef.current.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.key === "Tab") {
+        if (e.shiftKey) {
+          // Shift+Tab
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          // Tab forward
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    }
+
+    // Escape to close
+    function handleKey(e) {
       if (e.key === "Escape") {
         onClose();
+      } else {
+        handleTab(e);
+      }
+    }
+
+    document.addEventListener("keydown", handleKey);
+
+    // Prevent background scrolling
+    const { overflow } = document.body.style;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", handleKey);
+      document.body.style.overflow = overflow;
+      // Restore focus to prior element
+      if (previouslyFocusedElement.current && typeof previouslyFocusedElement.current.focus === "function") {
+        previouslyFocusedElement.current.focus();
       }
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    // eslint-disable-next-line
   }, [open, onClose]);
 
   if (!open || !image) return null;
@@ -32,6 +89,8 @@ function ImageLightbox({ open, image, onClose }) {
     <div
       role="dialog"
       aria-modal="true"
+      aria-labelledby="lightbox-title"
+      aria-describedby="lightbox-desc"
       className="lightbox-overlay"
       tabIndex={-1}
       onClick={onClose}
@@ -47,6 +106,7 @@ function ImageLightbox({ open, image, onClose }) {
         transition: "background 0.18s"
       }}
       data-testid="lightbox-backdrop"
+      ref={modalRef}
     >
       <div
         className="lightbox-content"
@@ -61,12 +121,15 @@ function ImageLightbox({ open, image, onClose }) {
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
-          alignItems: "stretch"
+          alignItems: "stretch",
+          position: "relative"
         }}
       >
         <button
+          ref={closeBtnRef}
           className="lightbox-close-btn"
-          aria-label="Close"
+          aria-label="Close lightbox"
+          aria-keyshortcuts="Esc"
           onClick={onClose}
           style={{
             position: "absolute",
@@ -102,6 +165,7 @@ function ImageLightbox({ open, image, onClose }) {
           }}
         />
         <div
+          id="lightbox-desc"
           className="lightbox-caption"
           style={{
             color: "#fff",
@@ -115,6 +179,7 @@ function ImageLightbox({ open, image, onClose }) {
             borderBottomRightRadius: "14px"
           }}
         >
+          <span id="lightbox-title" style={{display:'none'}}>{image.alt}</span>
           {image.alt}
         </div>
       </div>
