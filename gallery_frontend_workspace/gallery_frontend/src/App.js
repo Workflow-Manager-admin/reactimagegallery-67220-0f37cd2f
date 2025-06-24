@@ -12,9 +12,9 @@ import ImageLightbox from './ImageLightbox';
 function App() {
   // Filter state holds the currently selected category
   const [filter, setFilter] = useState('all');
-  // Modal/lightbox state
+  // Modal/lightbox state enhancement: track open/close and current index
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxImage, setLightboxImage] = useState(null);
+  const [lightboxIndex, setLightboxIndex] = useState(null);
 
   // Category definitions used in the filter bar
   const categories = [
@@ -28,17 +28,50 @@ function App() {
   const filteredImages =
     filter === 'all' ? images : images.filter(img => img.category === filter);
 
-  // Trigger opening the lightbox for a given image object
+  // Trigger opening the lightbox for a given image object (find index in filteredImages)
   const openLightbox = (img) => {
-    setLightboxImage(img);
+    const idx = filteredImages.findIndex(im => im.src === img.src);
+    setLightboxIndex(idx === -1 ? 0 : idx);
     setLightboxOpen(true);
   };
 
   // Close the lightbox and reset image
   const closeLightbox = () => {
     setLightboxOpen(false);
-    setLightboxImage(null);
+    setLightboxIndex(null);
   };
+
+  // Lightbox navigation handlers
+  const showNext = () => {
+    setLightboxIndex((prev) =>
+      prev === null
+        ? 0
+        : (prev + 1) % filteredImages.length
+    );
+  };
+
+  const showPrev = () => {
+    setLightboxIndex((prev) =>
+      prev === null
+        ? 0
+        : (prev - 1 + filteredImages.length) % filteredImages.length
+    );
+  };
+
+  // If the filter changes, and lightbox is open, reset selection for new filter (close modal)
+  React.useEffect(() => {
+    if (lightboxOpen) {
+      setLightboxOpen(false);
+      setLightboxIndex(null);
+    }
+    // eslint-disable-next-line
+  }, [filter]);
+
+  // Determine which image is currently shown in lightbox, if open
+  const currentLightboxImage =
+    lightboxOpen && lightboxIndex !== null && filteredImages[lightboxIndex]
+      ? filteredImages[lightboxIndex]
+      : null;
 
   return (
     <div className="app">
@@ -91,8 +124,12 @@ function App() {
       {/* Lightbox modal (conditioned on state) */}
       <ImageLightbox
         open={lightboxOpen}
-        image={lightboxImage}
+        image={currentLightboxImage}
         onClose={closeLightbox}
+        images={filteredImages}
+        index={lightboxIndex}
+        onPrev={showPrev}
+        onNext={showNext}
       />
     </div>
   );

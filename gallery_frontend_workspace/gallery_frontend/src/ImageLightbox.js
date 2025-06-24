@@ -3,32 +3,35 @@ import React, { useEffect, useRef } from "react";
 /**
  * PUBLIC_INTERFACE
  * A fullscreen modal/lightbox for displaying an image (with caption/info) above a dimmed background.
- * Accessibility: trap focus, aria-modal, close on Esc, close button, and outside click.
+ * Accessibility: trap focus, aria-modal, close on Esc, close button, outside click, and next/prev navigation with wrapping.
  *
  * @param {{
  *   open: boolean,
  *   image: { src: string, alt: string } | null,
- *   onClose: () => void
+ *   onClose: () => void,
+ *   images?: Array<{ src: string, alt: string }>,
+ *   index?: number,
+ *   onNext?: () => void,
+ *   onPrev?: () => void
  * }} props
  */
-function ImageLightbox({ open, image, onClose }) {
+function ImageLightbox({ open, image, onClose, images = [], index = 0, onPrev, onNext }) {
   const modalRef = useRef(null);
   const closeBtnRef = useRef(null);
+  const prevBtnRef = useRef(null);
+  const nextBtnRef = useRef(null);
   const previouslyFocusedElement = useRef(null);
 
-  // On mount/open, trap focus, restore focus after close
+  // Trap focus and restore focus after close
   useEffect(() => {
     if (!open) return;
 
-    // Save what was focused before opening modal
     previouslyFocusedElement.current = document.activeElement;
-
-    // Focus the close button as the first item
+    // Focus close or prev/next for easy arrow-key progression
     if (closeBtnRef.current) {
       closeBtnRef.current.focus();
     }
 
-    // Trap focus inside the modal
     function handleTab(e) {
       if (!modalRef.current) return;
       const focusables = modalRef.current.querySelectorAll(
@@ -39,13 +42,11 @@ function ImageLightbox({ open, image, onClose }) {
       const last = focusables[focusables.length - 1];
       if (e.key === "Tab") {
         if (e.shiftKey) {
-          // Shift+Tab
           if (document.activeElement === first) {
             e.preventDefault();
             last.focus();
           }
         } else {
-          // Tab forward
           if (document.activeElement === last) {
             e.preventDefault();
             first.focus();
@@ -54,10 +55,13 @@ function ImageLightbox({ open, image, onClose }) {
       }
     }
 
-    // Escape to close
     function handleKey(e) {
       if (e.key === "Escape") {
         onClose();
+      } else if ((e.key === "ArrowLeft" || e.key === "Left") && typeof onPrev === "function") {
+        onPrev();
+      } else if ((e.key === "ArrowRight" || e.key === "Right") && typeof onNext === "function") {
+        onNext();
       } else {
         handleTab(e);
       }
@@ -65,22 +69,25 @@ function ImageLightbox({ open, image, onClose }) {
 
     document.addEventListener("keydown", handleKey);
 
-    // Prevent background scrolling
+    // Prevent background scroll
     const { overflow } = document.body.style;
     document.body.style.overflow = "hidden";
 
     return () => {
       document.removeEventListener("keydown", handleKey);
       document.body.style.overflow = overflow;
-      // Restore focus to prior element
       if (previouslyFocusedElement.current && typeof previouslyFocusedElement.current.focus === "function") {
         previouslyFocusedElement.current.focus();
       }
     };
     // eslint-disable-next-line
-  }, [open, onClose]);
+  }, [open, onClose, onPrev, onNext]);
 
   if (!open || !image) return null;
+
+  // To cycle prev/next, check number of images
+  const hasPrev = images.length > 1;
+  const hasNext = images.length > 1;
 
   // Prevent event bubbling from image/caption area to backdrop
   const stop = (e) => e.stopPropagation();
@@ -125,6 +132,36 @@ function ImageLightbox({ open, image, onClose }) {
           position: "relative"
         }}
       >
+        {/* Navigation: Previous */}
+        {hasPrev && (
+          <button
+            ref={prevBtnRef}
+            className="lightbox-prev-btn"
+            aria-label="Show previous image"
+            aria-keyshortcuts="ArrowLeft"
+            onClick={onPrev}
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: 12,
+              transform: "translateY(-50%)",
+              background: "rgba(0,0,0,0.33)",
+              border: "none",
+              borderRadius: "50%",
+              width: 38,
+              height: 38,
+              color: "#fff",
+              fontSize: "1.5rem",
+              cursor: "pointer",
+              zIndex: 25,
+              lineHeight: 1
+            }}
+            tabIndex={0}
+          >
+            ‹
+          </button>
+        )}
+        {/* Close */}
         <button
           ref={closeBtnRef}
           className="lightbox-close-btn"
@@ -149,6 +186,35 @@ function ImageLightbox({ open, image, onClose }) {
         >
           ×
         </button>
+        {/* Navigation: Next */}
+        {hasNext && (
+          <button
+            ref={nextBtnRef}
+            className="lightbox-next-btn"
+            aria-label="Show next image"
+            aria-keyshortcuts="ArrowRight"
+            onClick={onNext}
+            style={{
+              position: "absolute",
+              top: "50%",
+              right: 12,
+              transform: "translateY(-50%)",
+              background: "rgba(0,0,0,0.33)",
+              border: "none",
+              borderRadius: "50%",
+              width: 38,
+              height: 38,
+              color: "#fff",
+              fontSize: "1.5rem",
+              cursor: "pointer",
+              zIndex: 25,
+              lineHeight: 1
+            }}
+            tabIndex={0}
+          >
+            ›
+          </button>
+        )}
         <img
           src={image.src}
           alt={image.alt}
@@ -181,6 +247,17 @@ function ImageLightbox({ open, image, onClose }) {
         >
           <span id="lightbox-title" style={{display:'none'}}>{image.alt}</span>
           {image.alt}
+          {images && typeof index === "number" && images.length > 1 && (
+            <span style={{
+              marginLeft: 12,
+              color: "#aee9ff",
+              fontSize: "0.98rem",
+              fontWeight: 300,
+              opacity: 0.72,
+            }}>
+              ({index + 1} / {images.length})
+            </span>
+          )}
         </div>
       </div>
     </div>
