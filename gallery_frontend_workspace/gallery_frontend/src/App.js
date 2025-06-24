@@ -1,0 +1,138 @@
+import React, { useState } from 'react';
+import './App.css';
+import images from './images';
+import ImageGrid from './ImageGrid';
+import ImageLightbox from './ImageLightbox';
+
+// PUBLIC_INTERFACE
+/**
+ * Main application component for the image gallery.
+ * Includes category filter, image grid, and lightbox overlay.
+ */
+function App() {
+  // Filter state holds the currently selected category
+  const [filter, setFilter] = useState('all');
+  // Modal/lightbox state enhancement: track open/close and current index
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+
+  // Category definitions used in the filter bar
+  const categories = [
+    { key: 'all', label: 'All' },
+    { key: 'nature', label: 'Nature' },
+    { key: 'city', label: 'City' },
+    { key: 'abstract', label: 'Abstract' },
+  ];
+
+  // Return only images belonging to the selected category
+  const filteredImages =
+    filter === 'all' ? images : images.filter(img => img.category === filter);
+
+  // Trigger opening the lightbox for a given image object (find index in filteredImages)
+  const openLightbox = (img) => {
+    const idx = filteredImages.findIndex(im => im.src === img.src);
+    setLightboxIndex(idx === -1 ? 0 : idx);
+    setLightboxOpen(true);
+  };
+
+  // Close the lightbox and reset image
+  const closeLightbox = () => {
+    setLightboxOpen(false);
+    setLightboxIndex(null);
+  };
+
+  // Lightbox navigation handlers
+  const showNext = () => {
+    setLightboxIndex((prev) =>
+      prev === null
+        ? 0
+        : (prev + 1) % filteredImages.length
+    );
+  };
+
+  const showPrev = () => {
+    setLightboxIndex((prev) =>
+      prev === null
+        ? 0
+        : (prev - 1 + filteredImages.length) % filteredImages.length
+    );
+  };
+
+  // If the filter changes, and lightbox is open, reset selection for new filter (close modal)
+  React.useEffect(() => {
+    if (lightboxOpen) {
+      setLightboxOpen(false);
+      setLightboxIndex(null);
+    }
+    // eslint-disable-next-line
+  }, [filter]);
+
+  // Determine which image is currently shown in lightbox, if open
+  const currentLightboxImage =
+    lightboxOpen && lightboxIndex !== null && filteredImages[lightboxIndex]
+      ? filteredImages[lightboxIndex]
+      : null;
+
+  return (
+    <div className="app">
+      {/* Navbar */}
+      <nav className="navbar">
+        <div className="container">
+          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+            <div className="logo">
+              <span className="logo-symbol">*</span> KAVIA AI
+            </div>
+            <button className="btn">Gallery Template</button>
+          </div>
+        </div>
+      </nav>
+
+      <main>
+        <div className="container" style={{ paddingTop: "120px" }}>
+          {/* Filter Bar */}
+          <div className="filter-bar" style={{
+            display: "flex",
+            gap: "8px",
+            marginBottom: "32px",
+            justifyContent: "center",
+          }}>
+            {categories.map(cat => (
+              <button
+                key={cat.key}
+                type="button"
+                className={`btn filter-btn${filter === cat.key ? " selected" : ""}`}
+                onClick={() => setFilter(cat.key)}
+                aria-pressed={filter === cat.key}
+                style={{
+                  fontWeight: filter === cat.key ? 600 : 500,
+                  background: filter === cat.key ? "var(--base-light)" : "rgba(26,26,26,0.8)",
+                  color: filter === cat.key ? "#fff" : "var(--text-secondary)",
+                  boxShadow: filter === cat.key ? "0 2px 12px rgba(0,255,255,0.07)" : "none",
+                  border: filter === cat.key ? "1.5px solid var(--base-light)" : "1.5px solid var(--border-color)",
+                  outline: filter === cat.key ? "1.5px solid var(--base-light)" : "none",
+                  transition: "all 0.16s cubic-bezier(.5,2,.5,1)"
+                }}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+          {/* Image Grid */}
+          <ImageGrid images={filteredImages} onImageClick={openLightbox} />
+        </div>
+      </main>
+      {/* Lightbox modal (conditioned on state) */}
+      <ImageLightbox
+        open={lightboxOpen}
+        image={currentLightboxImage}
+        onClose={closeLightbox}
+        images={filteredImages}
+        index={lightboxIndex}
+        onPrev={showPrev}
+        onNext={showNext}
+      />
+    </div>
+  );
+}
+
+export default App;

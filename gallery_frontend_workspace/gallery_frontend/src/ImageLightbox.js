@@ -1,0 +1,267 @@
+import React, { useEffect, useRef } from "react";
+
+/**
+ * PUBLIC_INTERFACE
+ * A fullscreen modal/lightbox for displaying an image (with caption/info) above a dimmed background.
+ * Accessibility: trap focus, aria-modal, close on Esc, close button, outside click, and next/prev navigation with wrapping.
+ *
+ * @param {{
+ *   open: boolean,
+ *   image: { src: string, alt: string } | null,
+ *   onClose: () => void,
+ *   images?: Array<{ src: string, alt: string }>,
+ *   index?: number,
+ *   onNext?: () => void,
+ *   onPrev?: () => void
+ * }} props
+ */
+function ImageLightbox({ open, image, onClose, images = [], index = 0, onPrev, onNext }) {
+  const modalRef = useRef(null);
+  const closeBtnRef = useRef(null);
+  const prevBtnRef = useRef(null);
+  const nextBtnRef = useRef(null);
+  const previouslyFocusedElement = useRef(null);
+
+  // Trap focus and restore focus after close
+  useEffect(() => {
+    if (!open) return;
+
+    previouslyFocusedElement.current = document.activeElement;
+    // Focus close or prev/next for easy arrow-key progression
+    if (closeBtnRef.current) {
+      closeBtnRef.current.focus();
+    }
+
+    function handleTab(e) {
+      if (!modalRef.current) return;
+      const focusables = modalRef.current.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.key === "Tab") {
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    }
+
+    function handleKey(e) {
+      if (e.key === "Escape") {
+        onClose();
+      } else if ((e.key === "ArrowLeft" || e.key === "Left") && typeof onPrev === "function") {
+        onPrev();
+      } else if ((e.key === "ArrowRight" || e.key === "Right") && typeof onNext === "function") {
+        onNext();
+      } else {
+        handleTab(e);
+      }
+    }
+
+    document.addEventListener("keydown", handleKey);
+
+    // Prevent background scroll
+    const { overflow } = document.body.style;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", handleKey);
+      document.body.style.overflow = overflow;
+      if (previouslyFocusedElement.current && typeof previouslyFocusedElement.current.focus === "function") {
+        previouslyFocusedElement.current.focus();
+      }
+    };
+    // eslint-disable-next-line
+  }, [open, onClose, onPrev, onNext]);
+
+  if (!open || !image) return null;
+
+  // To cycle prev/next, check number of images
+  const hasPrev = images.length > 1;
+  const hasNext = images.length > 1;
+
+  // Prevent event bubbling from image/caption area to backdrop
+  const stop = (e) => e.stopPropagation();
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="lightbox-title"
+      aria-describedby="lightbox-desc"
+      className="lightbox-overlay"
+      tabIndex={-1}
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        left: 0, top: 0, width: "100vw", height: "100vh",
+        background: "rgba(20, 24, 35, 0.86)",
+        backdropFilter: "blur(1.5px)",
+        zIndex: 2000,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        transition: "background 0.18s"
+      }}
+      data-testid="lightbox-backdrop"
+      ref={modalRef}
+    >
+      <div
+        className="lightbox-content"
+        onClick={stop}
+        style={{
+          background: "rgba(34,36,48,0.7)",
+          borderRadius: "18px",
+          maxWidth: "95vw",
+          maxHeight: "92vh",
+          boxShadow: "0 8px 30px 0 rgba(0,0,0,0.12)",
+          padding: 0,
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "stretch",
+          position: "relative"
+        }}
+      >
+        {/* Navigation: Previous */}
+        {hasPrev && (
+          <button
+            ref={prevBtnRef}
+            className="lightbox-prev-btn"
+            aria-label="Show previous image"
+            aria-keyshortcuts="ArrowLeft"
+            onClick={onPrev}
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: 12,
+              transform: "translateY(-50%)",
+              background: "rgba(0,0,0,0.33)",
+              border: "none",
+              borderRadius: "50%",
+              width: 38,
+              height: 38,
+              color: "#fff",
+              fontSize: "1.5rem",
+              cursor: "pointer",
+              zIndex: 25,
+              lineHeight: 1
+            }}
+            tabIndex={0}
+          >
+            ‹
+          </button>
+        )}
+        {/* Close */}
+        <button
+          ref={closeBtnRef}
+          className="lightbox-close-btn"
+          aria-label="Close lightbox"
+          aria-keyshortcuts="Esc"
+          onClick={onClose}
+          style={{
+            position: "absolute",
+            top: 18,
+            right: 22,
+            background: "rgba(0,0,0,0.36)",
+            border: "none",
+            borderRadius: "50%",
+            width: 38,
+            height: 38,
+            color: "#fff",
+            fontSize: "1.65rem",
+            cursor: "pointer",
+            zIndex: 25,
+            lineHeight: 1
+          }}
+        >
+          ×
+        </button>
+        {/* Navigation: Next */}
+        {hasNext && (
+          <button
+            ref={nextBtnRef}
+            className="lightbox-next-btn"
+            aria-label="Show next image"
+            aria-keyshortcuts="ArrowRight"
+            onClick={onNext}
+            style={{
+              position: "absolute",
+              top: "50%",
+              right: 12,
+              transform: "translateY(-50%)",
+              background: "rgba(0,0,0,0.33)",
+              border: "none",
+              borderRadius: "50%",
+              width: 38,
+              height: 38,
+              color: "#fff",
+              fontSize: "1.5rem",
+              cursor: "pointer",
+              zIndex: 25,
+              lineHeight: 1
+            }}
+            tabIndex={0}
+          >
+            ›
+          </button>
+        )}
+        <img
+          src={image.src}
+          alt={image.alt}
+          className="lightbox-img"
+          style={{
+            maxHeight: "70vh",
+            maxWidth: "84vw",
+            objectFit: "contain",
+            borderRadius: "14px",
+            background: "#181b24 linear-gradient(135deg, #262838 60%, #292b3b 100%)",
+            display: "block",
+            margin: "36px auto 0",
+            boxShadow: "0 0 0px 0 rgba(0,255,255,0.04)"
+          }}
+        />
+        <div
+          id="lightbox-desc"
+          className="lightbox-caption"
+          style={{
+            color: "#fff",
+            fontWeight: 400,
+            fontSize: "1.12rem",
+            lineHeight: 1.5,
+            background: "rgba(22, 26, 32, 0.86)",
+            padding: "22px 38px 18px 38px",
+            textAlign: "center",
+            borderBottomLeftRadius: "14px",
+            borderBottomRightRadius: "14px"
+          }}
+        >
+          <span id="lightbox-title" style={{display:'none'}}>{image.alt}</span>
+          {image.alt}
+          {images && typeof index === "number" && images.length > 1 && (
+            <span style={{
+              marginLeft: 12,
+              color: "#aee9ff",
+              fontSize: "0.98rem",
+              fontWeight: 300,
+              opacity: 0.72,
+            }}>
+              ({index + 1} / {images.length})
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default ImageLightbox;

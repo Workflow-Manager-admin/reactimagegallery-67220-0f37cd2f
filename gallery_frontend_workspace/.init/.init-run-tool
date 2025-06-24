@@ -1,0 +1,4 @@
+{
+    "command": "PORT=<port> BROWSER=none npm start",
+    "working_directory": "/home/kavia/workspace/code-generation/reactimagegallery-67220-0f37cd2f/gallery_frontend_workspace/gallery_frontend"
+}
