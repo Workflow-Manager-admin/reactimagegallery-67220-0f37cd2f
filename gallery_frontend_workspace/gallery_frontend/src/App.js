@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './App.css';
 import images from './images';
+import ImageGrid from './ImageGrid';
 
 // PUBLIC_INTERFACE
 /**
@@ -68,46 +69,7 @@ function App() {
             ))}
           </div>
           {/* Image Grid */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: "20px",
-              marginBottom: "64px",
-              justifyItems: "center",
-            }}
-          >
-            {filteredImages.map((img, idx) => (
-              <div
-                key={idx}
-                style={{
-                  position: "relative",
-                  borderRadius: "12px",
-                  overflow: "hidden",
-                  background: "#222",
-                  width: "100%",
-                  maxWidth: "300px",
-                  cursor: "pointer",
-                  boxShadow: "0 2px 16px rgba(0,0,0,0.15)",
-                  minHeight: "180px",
-                }}
-              >
-                <img
-                  src={img.src}
-                  alt={img.alt}
-                  loading="lazy"
-                  style={{
-                    width: "100%",
-                    display: "block",
-                    objectFit: "cover",
-                    minHeight: "180px",
-                    aspectRatio: "4/3",
-                  }}
-                />
-                {/* Placeholder for overlay on hover, lightbox, etc */}
-              </div>
-            ))}
-          </div>
+          <ImageGrid images={filteredImages} />
         </div>
       </main>
     </div>
