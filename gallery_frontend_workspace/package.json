@@ -1,13 +1,13 @@
 {
-  "name": "gallery_frontend_workspace",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "react-scripts start",
-    "build": "react-scripts build"  // <--- REMOVED THE TRAILING COMMA HERE
-  },
-  "author": "",
-  "license": "ISC",
-  "description": ""
+  "name": "gallery_frontend_workspace",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "react-scripts start",
+    "build": "react-scripts build"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": ""
 }
